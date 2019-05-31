@@ -16,5 +16,14 @@
     "mongoose": "^5.5.9",
     "morgan": "~1.0.0",
     "static-favicon": "~1.0.0"
+  },
+  "devDependencies": {
+    "commitizen": "^3.1.1",
+    "cz-conventional-changelog": "^2.1.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
   }
 }
