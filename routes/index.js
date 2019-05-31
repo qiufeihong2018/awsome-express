@@ -3,48 +3,95 @@ const express = require('express');
 const router = express.Router();
 // 获取事件
 const event = require('../initData/alarm')
+// 获取规则
+const rule = require('../initData/rule')
+
+let arrayEvent = []
+
+// 自定义周期,30d-毫秒数
+const cycle = 2592000
+
+// 高级事件
+let advanceEvent = {
+  alarmList: [],
+  expireAt: '',
+  trace: []
+}
+
+let status_map = new Map()
+let final_map = new Map()
+
+rule.forEach(item => {
+  // 各个规则组
+  status_map.set(item.key.value, [])
+  final_map.set(item.key.value, [])
+})
+
+
+
+// 获取低级事件
+function getArrayEvent() {
+  for (let i in event) {
+    let tmpEvent = {
+      _id: '',
+      signatureId: '',
+      timestamp: ''
+    }
+    tmpEvent._id = event[i]._id
+    tmpEvent.signatureId = event[i].signatureId
+    // 通过原型方法转时间戳
+    tmpEvent.timestamp = (new Date(event[i].timestamp)).getTime()
+
+    arrayEvent.push(tmpEvent)
+  }
+}
+// map转对象
+function strMapToObj(strMap) {
+  let obj = Object.create(null)
+  for (let item of strMap) {
+    obj[item[0]] = item[1]
+  }
+  return obj
+}
 // 从低级事件中匹配高级事件
 router.get('/', function (req, res) {
-  // 自定义周期
-  const cycle = 30
-  // 自定义规则
-  const rule = ['1004137', '1004139', '1004136']
-  // 比配的列表
-  let tmpEvent = []
-  let tmpSmallEvent = {
-    _id: '',
-    timestamp: ''
-  }
-  // 高级事件
-  let advanceEvent = []
+  getArrayEvent()
   // 遍历所有低级事件
-  for (let i in event) {
-    // console.log(`${i}------${event[i]}`)
-    let _id = event[i]._id
-    // console.log('_id', _id)
-    let signatureId = event[i].signatureId
-    console.log('signatureId', signatureId)
-    // 通过原型方法转时间戳
-    let timestamp = (new Date(event[i].timestamp)).getTime()
-    // console.log('timestamp', timestamp)
-    // 遍历规则
-    // for (let j in rule) {
-    if (signatureId === rule[0]) {
-      tmpSmallEvent._id = _id
-      tmpSmallEvent.timestamp = timestamp
-      tmpEvent[0] = tmpSmallEvent
-      if(signatureId===rule[1]){
-        tmpSmallEvent._id = _id
-        tmpSmallEvent.timestamp = timestamp
-        tmpEvent[1] = tmpSmallEvent    
+  // 删选各个规则组
+  for (let key of status_map.keys()) {
+    let tmpArr = []
+
+    for (let i in arrayEvent) {
+      if (arrayEvent[i].signatureId === key) {
+        tmpArr.push(arrayEvent[i])
       }
-      // }
-      // console.log('rule', rule[j])
-      // tmpEvent[j] = _id
-      console.log('tmpEvent', tmpEvent)
+    }
+    status_map.set(key, tmpArr)
+    tmpArr = []
+  }
+  // 筛选出最新的事件
+  // item[0]是key，item[1]是value
+  for (let item of status_map.entries()) {
+    final_map.set(item[0], item[1][0])
+    for (let j in item[1]) {
+      if (item[1][j].timestamp > final_map.get(item[0]).timestamp) {
+        final_map.set(item[0], item[1][j])
+      }
     }
   }
-  res.send(tmpEvent)
+
+  // 从event中找到详细数据
+  for (let item of final_map.entries()) {
+    var expireAt = item[1].timestamp
+    let tmpArr = []
+    tmpArr.push(event.find(v => v._id === item[1]._id))
+    final_map.set(item[0], tmpArr)
+  }
+
+  advanceEvent.alarmList = rule
+  advanceEvent.expireAt = cycle + expireAt
+  advanceEvent.trace = strMapToObj(final_map)
+  res.send(advanceEvent)
 });
 
 module.exports = router;
