@@ -27,7 +27,18 @@ rule.forEach(item => {
   final_map.set(item.key.value, [])
 })
 
-
+// 总的符合规则的数据
+let arrTotalRuleToEvent = []
+// 符合规则的数组
+let arrRuleToEvent = []
+//符合规则的事件对象
+let objRuleToEvent = {
+  _id: '',
+  signatureId: '',
+  timestamp: '',
+  expireAt: '',
+  nextRule: ''
+}
 
 // 获取低级事件
 function getArrayEvent() {
@@ -35,16 +46,18 @@ function getArrayEvent() {
     let tmpEvent = {
       _id: '',
       signatureId: '',
-      timestamp: ''
+      timestamp: '',
+      expireAt: ''
     }
     tmpEvent._id = event[i]._id
     tmpEvent.signatureId = event[i].signatureId
     // 通过原型方法转时间戳
     tmpEvent.timestamp = (new Date(event[i].timestamp)).getTime()
-
+    tmpEvent.expireAt = tmpEvent.timestamp + cycle
     arrayEvent.push(tmpEvent)
   }
 }
+
 // map转对象
 function strMapToObj(strMap) {
   let obj = Object.create(null)
@@ -56,8 +69,9 @@ function strMapToObj(strMap) {
 // 从低级事件中匹配高级事件
 router.get('/', function (req, res) {
   getArrayEvent()
+
   // 遍历所有低级事件
-  // 删选各个规则组
+  // 筛选各个规则组
   for (let key of status_map.keys()) {
     let tmpArr = []
 
